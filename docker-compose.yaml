@@ -2,6 +2,7 @@ version: '3'
 
 services:
   rust-lambda:
+    container_name: 'rust-lambda'
     build: 
       context: ./
       dockerfile: './docker/Dockerfile'

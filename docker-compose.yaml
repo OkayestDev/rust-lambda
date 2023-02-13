@@ -1,0 +1,7 @@
+version: '3'
+
+services:
+  rust-lambda:
+    build: 
+      context: ./
+      dockerfile: './docker/Dockerfile'

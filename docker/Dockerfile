@@ -1,17 +1,25 @@
-FROM public.ecr.aws/lambda/provided:al2.2023.02.13.17
+ARG FUNCTION_DIR="/function"
 
-RUN yum -y update
-RUN yum -y install curl
-RUN yum install -y gcc gcc-c++ make
+FROM rust:1.63-buster as builder
 
-RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+WORKDIR /build
 
-ENV PATH=$PATH:/root/.cargo/bin
+ADD Cargo.toml Cargo.toml
+ADD Cargo.lock Cargo.lock
+ADD src src
 
-COPY . /var/task
+# Cache build folders, see: https://stackoverflow.com/a/60590697/7661119
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/home/root/app/target \
+    rustup target add x86_64-unknown-linux-musl && \
+    cargo build --release --target x86_64-unknown-linux-musl
 
-RUN cargo build
+FROM gcr.io/distroless/static
 
-# ENTRYPOINT ["tail", "-f", "/dev/null"]
+ARG FUNCTION_DIR
 
-CMD ["/var/task/target/debug/rust_lambda"]
+WORKDIR ${FUNCTION_DIR}
+
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/bootstrap bootstrap
+
+ENTRYPOINT ["./bootstrap"]
